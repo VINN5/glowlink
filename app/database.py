@@ -1,4 +1,3 @@
-import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 
@@ -10,12 +9,10 @@ async def connect_to_mongo():
     global client, db
     client = AsyncIOMotorClient(
         settings.MONGODB_URL,
-        tls=True,
-        tlsCAFile=certifi.where(),
-        tlsAllowInvalidCertificates=True,
         serverSelectionTimeoutMS=30000,
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
+        tlsAllowInvalidCertificates=True,
     )
     db = client[settings.DB_NAME]
     try:
