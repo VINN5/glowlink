@@ -21,7 +21,15 @@ app = FastAPI(
     description="GlowLink Beauty Platform API",
 )
 
-# CORS
+# CORS — allow localhost for dev and any extra origins from env
+extra_origins = os.environ.get("CORS_ORIGINS", "").split(",")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "https://glowlink.onrender.com",
+] + [o.strip() for o in extra_origins if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -29,6 +37,7 @@ app.add_middleware(
         "http://localhost:5174",
         "http://localhost:3000",
         "https://glowlink.onrender.com",
+        "https://glowlink-backend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
