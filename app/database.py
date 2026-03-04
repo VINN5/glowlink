@@ -12,14 +12,18 @@ async def connect_to_mongo():
         settings.MONGODB_URL,
         tls=True,
         tlsCAFile=certifi.where(),
-        tlsAllowInvalidCertificates=True,  # workaround for Python 3.13 SSL
+        tlsAllowInvalidCertificates=True,
         serverSelectionTimeoutMS=30000,
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
     )
     db = client[settings.DB_NAME]
-    await client.admin.command('ping')
-    print(f"✅ Connected to MongoDB: {settings.DB_NAME}")
+    try:
+        await client.admin.command('ping')
+        print(f"✅ Connected to MongoDB: {settings.DB_NAME}")
+    except Exception as e:
+        print(f"⚠️ MongoDB connection warning: {e}")
+        print("App will continue — retrying on first request...")
 
 
 async def close_mongo_connection():
