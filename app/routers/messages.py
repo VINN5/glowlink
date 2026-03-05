@@ -1,11 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 
 from app.database import get_database
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
+
+
+def now_utc():
+    return datetime.now(timezone.utc)
 
 
 def conversation_helper(c, current_user_id: str) -> dict:
@@ -74,8 +78,8 @@ async def start_conversation(data: dict, current_user: dict = Depends(get_curren
         "last_message": None,
         "last_message_at": None,
         f"unread_{current_user['id']}": 0,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": now_utc(),
+        "updated_at": now_utc(),
     }
     result = await db["conversations"].insert_one(conversation)
     new = await db["conversations"].find_one({"_id": result.inserted_id})
@@ -134,7 +138,11 @@ async def get_messages(conversation_id: str, current_user: dict = Depends(get_cu
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     await db["messages"].update_many(
-        {"conversation_id": ObjectId(conversation_id), "sender_id": {"$ne": ObjectId(current_user["id"])}, "is_read": False},
+        {
+            "conversation_id": ObjectId(conversation_id),
+            "sender_id": {"$ne": ObjectId(current_user["id"])},
+            "is_read": False,
+        },
         {"$set": {"is_read": True}}
     )
     await db["conversations"].update_one(
@@ -176,14 +184,14 @@ async def send_message(conversation_id: str, data: dict, current_user: dict = De
         "sender_id": ObjectId(current_user["id"]),
         "content": content,
         "is_read": False,
-        "created_at": datetime.utcnow(),
+        "created_at": now_utc(),
     }
     result = await db["messages"].insert_one(message)
 
     update = {
         "last_message": content,
-        "last_message_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "last_message_at": now_utc(),
+        "updated_at": now_utc(),
     }
     if other_id:
         update[f"unread_{other_id}"] = conversation.get(f"unread_{other_id}", 0) + 1
