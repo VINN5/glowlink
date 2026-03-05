@@ -8,13 +8,20 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const getAvatarUrl = (pic?: string) =>
   pic ? (pic.startsWith('http') ? pic : `${BASE_URL}${pic}`) : null;
 
+// Treats naive UTC timestamps from MongoDB as UTC
+const parseUTC = (ts?: string): Date => {
+  if (!ts) return new Date();
+  if (ts.endsWith('Z') || ts.includes('+')) return new Date(ts);
+  return new Date(ts + 'Z');
+};
+
 interface Props {
   conversation: any;
   onMessageSent?: () => void;
 }
 
 const formatMessageTime = (date: string) => {
-  const d = new Date(date);
+  const d = parseUTC(date);
   if (isToday(d)) return format(d, 'hh:mm a');
   if (isYesterday(d)) return `Yesterday ${format(d, 'hh:mm a')}`;
   return format(d, 'MMM dd, hh:mm a');
@@ -64,7 +71,7 @@ const ChatWindow = ({ conversation, onMessageSent }: Props) => {
       id: `temp-${Date.now()}`,
       sender_id: user?.id,
       content,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString(), // already has Z, fine
       is_read: false,
       optimistic: true,
     };
@@ -91,7 +98,7 @@ const ChatWindow = ({ conversation, onMessageSent }: Props) => {
 
   const groupedMessages: { date: string; messages: any[] }[] = [];
   messages.forEach(msg => {
-    const date = format(new Date(msg.created_at), 'MMM dd, yyyy');
+    const date = format(parseUTC(msg.created_at), 'MMM dd, yyyy');
     const last = groupedMessages[groupedMessages.length - 1];
     if (last && last.date === date) last.messages.push(msg);
     else groupedMessages.push({ date, messages: [msg] });
@@ -122,8 +129,8 @@ const ChatWindow = ({ conversation, onMessageSent }: Props) => {
               <div className="flex items-center gap-3 my-4">
                 <div className="flex-1 h-px bg-gray-200" />
                 <span className="text-xs text-gray-400 font-medium px-2">{
-                  isToday(new Date(group.messages[0].created_at)) ? 'Today' :
-                  isYesterday(new Date(group.messages[0].created_at)) ? 'Yesterday' :
+                  isToday(parseUTC(group.messages[0].created_at)) ? 'Today' :
+                  isYesterday(parseUTC(group.messages[0].created_at)) ? 'Yesterday' :
                   group.date
                 }</span>
                 <div className="flex-1 h-px bg-gray-200" />

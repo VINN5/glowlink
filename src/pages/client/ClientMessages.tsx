@@ -9,6 +9,13 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const getAvatarUrl = (pic?: string) =>
   pic ? (pic.startsWith('http') ? pic : `${BASE_URL}${pic}`) : null;
 
+// Treats naive UTC timestamps from MongoDB as UTC
+const parseUTC = (ts?: string) => {
+  if (!ts) return new Date();
+  if (ts.endsWith('Z') || ts.includes('+')) return new Date(ts);
+  return new Date(ts + 'Z');
+};
+
 const ClientMessages = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [active, setActive] = useState<any>(null);
@@ -20,7 +27,6 @@ const ClientMessages = () => {
     try {
       const res = await messagesAPI.listConversations();
       setConversations(res.data);
-      // Auto-select conversation if coming from specialist page
       if (autoSelectId) {
         const match = res.data.find((c: any) => c.id === autoSelectId);
         if (match) setActive(match);
@@ -37,7 +43,6 @@ const ClientMessages = () => {
   };
 
   useEffect(() => {
-    // Check if we navigated here with a conversation to open
     const state = location.state as any;
     fetchConversations(state?.conversationId);
     const interval = setInterval(() => fetchConversations(), 5000);
@@ -111,7 +116,7 @@ const ClientMessages = () => {
                     </p>
                     {c.last_message_at && (
                       <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                        {formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false }).replace('about ', '')}
+                        {formatDistanceToNow(parseUTC(c.last_message_at), { addSuffix: false }).replace('about ', '')}
                       </span>
                     )}
                   </div>

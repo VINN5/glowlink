@@ -4,6 +4,13 @@ import { MessageCircle, Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ChatWindow from '../../components/chat/ChatWindow';
 
+// Treats naive UTC timestamps from MongoDB as UTC
+const parseUTC = (ts?: string) => {
+  if (!ts) return new Date();
+  if (ts.endsWith('Z') || ts.includes('+')) return new Date(ts);
+  return new Date(ts + 'Z');
+};
+
 const SpecialistMessages = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [active, setActive] = useState<any>(null);
@@ -98,7 +105,7 @@ const SpecialistMessages = () => {
                     </p>
                     {c.last_message_at && (
                       <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                        {formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false }).replace('about ', '')}
+                        {formatDistanceToNow(parseUTC(c.last_message_at), { addSuffix: false }).replace('about ', '')}
                       </span>
                     )}
                   </div>
