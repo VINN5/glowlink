@@ -108,17 +108,44 @@ export const messagesAPI = {
   startConversation: (data: any) => api.post('/messages/conversations', data),
   listConversations: () => api.get('/messages/conversations'),
   getMessages: (conversationId: string) => api.get(`/messages/conversations/${conversationId}/messages`),
-  sendMessage: (conversationId: string, content: string) => api.post(`/messages/conversations/${conversationId}/messages`, { content }),
+  sendMessage: (conversationId: string, content: string) =>
+    api.post(`/messages/conversations/${conversationId}/messages`, { content }),
   getUnreadCount: () => api.get('/messages/unread'),
 };
 
 // Admin
 export const adminAPI = {
-  getStats: () => api.get('/admin/stats'),
-  listUsers: () => api.get('/admin/users'),
-  toggleUserActive: (id: string) => api.put(`/admin/users/${id}/toggle-active`),
-  verifySpecialist: (id: string) => api.put(`/admin/specialists/${id}/verify`),
-  listBookings: () => api.get('/admin/bookings'),
+  // Stats
+  getStats: () =>
+    api.get('/admin/stats'),
+
+  // Users
+  getUsers: (params?: { role?: string; search?: string; limit?: number; sort?: string }) =>
+    api.get('/admin/users', { params }),
+
+  updateUser: (userId: string, data: { role?: string; is_active?: boolean }) =>
+    api.patch(`/admin/users/${userId}`, data),
+
+  deleteUser: (userId: string) =>
+    api.delete(`/admin/users/${userId}`),
+
+  // Specialists
+  getSpecialists: (params?: { search?: string; verified?: boolean }) =>
+    api.get('/admin/specialists', { params }),
+
+  verifySpecialist: (specialistId: string, verify: boolean) =>
+    api.patch(`/admin/specialists/${specialistId}/verify`, { is_verified: verify }),
+
+  deleteSpecialist: (specialistId: string) =>
+    api.delete(`/admin/specialists/${specialistId}`),
+
+  // Verification queue (unverified specialists)
+  getPendingVerifications: () =>
+    api.get('/admin/specialists', { params: { verified: false } }),
+
+  // Bookings (kept from your original)
+  listBookings: () =>
+    api.get('/admin/bookings'),
 };
 
 export default api;

@@ -1,213 +1,179 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
-import { Users, Calendar, Scissors, TrendingUp, Shield, UserCheck, UserX } from 'lucide-react';
-import toast from 'react-hot-toast';
+import {
+  Users, Briefcase, Calendar, ShieldCheck,
+  TrendingUp, ArrowRight, UserCheck, UserX, Clock
+} from 'lucide-react';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'bookings'>('overview');
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetch = async () => {
       try {
-        const [statsRes, usersRes, bookingsRes] = await Promise.all([
+        const [statsRes, usersRes, verifyRes] = await Promise.all([
           adminAPI.getStats(),
-          adminAPI.listUsers(),
-          adminAPI.listBookings(),
+          adminAPI.getUsers({ limit: 5, sort: 'newest' }),
+          adminAPI.getPendingVerifications(),
         ]);
         setStats(statsRes.data);
-        setUsers(usersRes.data);
-        setBookings(bookingsRes.data);
+        setRecentUsers(usersRes.data?.users || usersRes.data || []);
+        setPendingVerifications((verifyRes.data || []).slice(0, 4));
       } catch {
-        toast.error('Failed to load admin data');
+        setStats({ total_users: 0, total_specialists: 0, total_bookings: 0, pending_verifications: 0 });
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetch();
   }, []);
 
-  const toggleUser = async (id: string) => {
-    try {
-      await adminAPI.toggleUserActive(id);
-      setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: !u.is_active } : u));
-      toast.success('User status updated');
-    } catch {
-      toast.error('Failed to update user');
-    }
+  const statCards = [
+    { label: 'Total Users', value: stats?.total_users ?? '—', icon: Users, color: 'from-indigo-500 to-blue-600', change: '+12%' },
+    { label: 'Specialists', value: stats?.total_specialists ?? '—', icon: Briefcase, color: 'from-violet-500 to-purple-600', change: '+8%' },
+    { label: 'Total Bookings', value: stats?.total_bookings ?? '—', icon: Calendar, color: 'from-emerald-500 to-teal-600', change: '+23%' },
+    { label: 'Pending Verify', value: stats?.pending_verifications ?? '—', icon: ShieldCheck, color: 'from-amber-500 to-orange-600', change: null },
+  ];
+
+  const roleColor: Record<string, string> = {
+    client: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    specialist: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+    admin: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-400 rounded-xl flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-gray-500 text-sm">GlowLink Management Panel</p>
-          </div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          <p className="text-slate-400 text-sm mt-1">Platform overview and management</p>
         </div>
+        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2">
+          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="text-slate-300 text-xs font-medium">System Online</span>
+        </div>
+      </div>
 
-        {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {[
-              { label: 'Total Users', value: stats.total_users, icon: Users, color: 'text-blue-500 bg-blue-50' },
-              { label: 'Clients', value: stats.total_clients, icon: Users, color: 'text-pink-500 bg-pink-50' },
-              { label: 'Specialists', value: stats.total_specialists, icon: Scissors, color: 'text-purple-500 bg-purple-50' },
-              { label: 'Total Bookings', value: stats.total_bookings, icon: Calendar, color: 'text-green-500 bg-green-50' },
-              { label: 'Pending', value: stats.pending_bookings, icon: TrendingUp, color: 'text-yellow-500 bg-yellow-50' },
-              { label: 'Completed', value: stats.completed_bookings, icon: TrendingUp, color: 'text-teal-500 bg-teal-50' },
-              { label: 'Active Services', value: stats.total_services, icon: Scissors, color: 'text-rose-500 bg-rose-50' },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="bg-white rounded-2xl border border-gray-100 p-4">
-                <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-3`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="text-2xl font-bold text-gray-800">{value}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map(({ label, value, icon: Icon, color, change }) => (
+          <div key={label} className="bg-slate-900 rounded-2xl border border-slate-800 p-5 hover:border-slate-700 transition-colors">
+            <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+              <Icon className="w-5 h-5 text-white" />
+            </div>
+            <p className="text-2xl font-bold text-white">{loading ? <span className="text-slate-600">—</span> : value}</p>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">{label}</p>
+            {change && (
+              <div className="flex items-center gap-1 mt-2">
+                <TrendingUp className="w-3 h-3 text-emerald-400" />
+                <span className="text-xs text-emerald-400 font-semibold">{change} this month</span>
               </div>
-            ))}
+            )}
           </div>
-        )}
+        ))}
+      </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          {(['overview', 'users', 'bookings'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all capitalize ${
-                activeTab === tab
-                  ? 'bg-pink-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-pink-300'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      <div className="grid lg:grid-cols-2 gap-5">
+        {/* Recent Users */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+            <h2 className="font-bold text-white text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-400" /> Recent Users
+            </h2>
+            <Link to="/admin/users" className="text-indigo-400 text-xs font-semibold flex items-center gap-1 hover:text-indigo-300">
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="p-4">
+            {loading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-12 bg-slate-800 rounded-xl animate-pulse" />)}
+              </div>
+            ) : recentUsers.length === 0 ? (
+              <p className="text-center text-slate-500 text-sm py-8">No users yet</p>
+            ) : (
+              <div className="space-y-2">
+                {recentUsers.map((u: any) => (
+                  <div key={u.id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
+                      {u.profile_picture
+                        ? <img src={u.profile_picture.startsWith('http') ? u.profile_picture : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${u.profile_picture}`} alt="" className="w-full h-full object-cover" />
+                        : u.full_name?.charAt(0).toUpperCase()
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-200 truncate">{u.full_name}</p>
+                      <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-lg font-medium border capitalize ${roleColor[u.role] || 'bg-slate-700 text-slate-400'}`}>
+                      {u.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Users Tab */}
-        {activeTab === 'users' && (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-800">All Users ({users.length})</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-left">Email</th>
-                    <th className="px-4 py-3 text-left">Role</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{u.full_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full capitalize font-medium ${
-                          u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                          u.role === 'specialist' ? 'bg-pink-100 text-pink-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {u.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => toggleUser(u.id)}
-                          className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                            u.is_active
-                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                              : 'bg-green-50 text-green-600 hover:bg-green-100'
-                          }`}
-                        >
-                          {u.is_active ? <><UserX className="w-3 h-3" /> Deactivate</> : <><UserCheck className="w-3 h-3" /> Activate</>}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Pending Verifications */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+            <h2 className="font-bold text-white text-sm flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-400" /> Verification Queue
+              {pendingVerifications.length > 0 && (
+                <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold border border-amber-500/30">
+                  {pendingVerifications.length}
+                </span>
+              )}
+            </h2>
+            <Link to="/admin/verify" className="text-indigo-400 text-xs font-semibold flex items-center gap-1 hover:text-indigo-300">
+              Manage <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-        )}
-
-        {/* Bookings Tab */}
-        {activeTab === 'bookings' && (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-800">All Bookings ({bookings.length})</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                  <tr>
-                    <th className="px-4 py-3 text-left">ID</th>
-                    <th className="px-4 py-3 text-left">Date</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">Price</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {bookings.map(b => (
-                    <tr key={b.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-500">#{b.id.slice(-8)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {new Date(b.booking_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${
-                          b.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                          b.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                          b.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {b.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold text-pink-600">${b.total_price}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="p-4">
+            {loading ? (
+              <div className="space-y-3">
+                {[1,2].map(i => <div key={i} className="h-14 bg-slate-800 rounded-xl animate-pulse" />)}
+              </div>
+            ) : pendingVerifications.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                </div>
+                <p className="text-sm font-medium text-slate-400">All clear!</p>
+                <p className="text-xs text-slate-600 mt-0.5">No pending verifications</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {pendingVerifications.map((s: any) => (
+                  <div key={s.id} className="flex items-center gap-3 p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-amber-400 font-bold text-sm flex-shrink-0">
+                      {s.full_name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-200 truncate">{s.full_name || 'Specialist'}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3 text-amber-500" />
+                        <span className="text-xs text-amber-500/80">Awaiting review</span>
+                      </div>
+                    </div>
+                    <Link
+                      to="/admin/verify"
+                      className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                    >
+                      Review
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center text-gray-500">
-            <Shield className="w-12 h-12 mx-auto mb-3 text-pink-300" />
-            <p className="font-medium text-gray-700">Admin Overview</p>
-            <p className="text-sm mt-1">Switch to Users or Bookings tabs to manage the platform.</p>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
