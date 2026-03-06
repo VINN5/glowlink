@@ -148,4 +148,13 @@ export const adminAPI = {
     api.get('/admin/bookings'),
 };
 
+
+export const paymentsAPI = {
+  initiate: (bookingId: string, phone: string) =>
+    api.post('/payments/pay', { booking_id: bookingId, phone }),
+
+  status: (bookingId: string) =>
+    api.get(`/payments/status/${bookingId}`),
+};
+
 export default api;
