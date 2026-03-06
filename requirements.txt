@@ -5,10 +5,11 @@ pymongo[srv]
 dnspython
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 python-multipart
 python-dotenv
 pydantic[email]
 pydantic-settings
 pillow
 httpx
-email-validatorbcrypt==4.0.1
+email-validator
