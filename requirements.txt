@@ -11,4 +11,4 @@ pydantic[email]
 pydantic-settings
 pillow
 httpx
-email-validator
+email-validatorbcrypt==4.0.1
