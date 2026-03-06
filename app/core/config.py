@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # M-Pesa / Daraja
+    BACKEND_URL: str = "https://glowlink-backend.onrender.com"
+    MPESA_CONSUMER_KEY: str = ""
+    MPESA_CONSUMER_SECRET: str = ""
+    MPESA_SHORTCODE: str = "174379"   # Safaricom sandbox default
+    MPESA_PASSKEY: str = ""
+    MPESA_ENV: str = "sandbox"        # change to "production" when going live
+
     class Config:
         env_file = ".env"
 
